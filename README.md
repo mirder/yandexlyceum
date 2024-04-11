@@ -1,1 +1,1 @@
-# yandexlyceum
+# 🚽
