@@ -8,6 +8,7 @@ hp = 0
 damage = 0
 exp = 0
 balance = 0
+lvl = 1
 potions = {'Здоровья': 0, 'Замедления': 0, 'Тумана': 0, 'Урона': 0}
 potions_price = {'Здоровья': 17, 'Замедления': 5, 'Тумана': 13, 'Урона': 15}
 plan = -1  # сможет ли сбежать игрок, выбирается рандомно; 1 - да, 2 - нет; становится 0 при применении з. Тумана
@@ -26,6 +27,16 @@ prof_database = {
 }
 
 
+def reply(message):
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button_1 = types.KeyboardButton('Атаковать')
+    button_2 = types.KeyboardButton('Бежать')
+    button_3 = types.KeyboardButton('Использовать зелье')
+    keyboard.add(button_1, button_2, button_3)
+    bot.send_message(message.chat.id,
+                     text=f'Вы успешно использовали зелье {message.text}', reply_markup=keyboard)
+
+
 def make_prof_menu():
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     for prof in prof_database.keys():
@@ -42,7 +53,7 @@ def make_race_menu():
 
 def main_menu():
     global hp, damage, exp, lvl, balance
-    hp = damage = exp = 0
+    hp = damage = exp = balance = 0
     lvl = 1
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton('Начать игру')
@@ -72,16 +83,16 @@ def create_monster(lvl):
     rnd_name = random.choice(monster_name)
     rnd_hp = random.randint(150 * lvl, 260 * lvl)
     rnd_damage = random.randint(60 * lvl, 110 * lvl)
-    return [rnd_name, rnd_hp, rnd_damage]
+    rnd_cost = random.randint(10, 17)
+    return [rnd_name, rnd_hp, rnd_damage, rnd_cost]
 
 
-@bot.message_handler(content_types=['text'])
 def buy(message, potion):
     global balance, potions_price, potions
     if balance >= potions_price[potion]:
         balance -= potions_price[potion]
         potions[potion] += 1
-        bot.send_message(message.chat.id, text='Вы преобрели зелье {potion}', reply_markup=start_quest())
+        bot.send_message(message.chat.id, text=f'Вы преобрели зелье {message.text}', reply_markup=start_quest())
     else:
         bot.send_message(message.chat.id, text='Вам не хватило денег(\n'
                                                'P.S. Надеюсь в жизни такого не было', reply_markup=start_quest())
@@ -97,10 +108,19 @@ def start(message):
     bot.send_message(message.chat.id, text='Приветствую!! Вы готовы начать игру?', reply_markup=keyboard)
 
 
+def potionkeyboard():
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    button_1 = types.KeyboardButton('Атаковать')
+    button_2 = types.KeyboardButton('Бежать')
+    button_3 = types.KeyboardButton('Использовать зелье')
+    keyboard.add(button_1, button_2, button_3)
+    return keyboard
+
+
 @bot.message_handler(content_types=['text'])
 def main(message):
-    global hp, damage, exp, lvl, plan, can, potions
-    global mns0, mns1, mns2  # имя, hp, урон
+    global hp, damage, exp, lvl, plan, can, potions, balance, keyboard
+    global mns0, mns1, mns2, mns3  # имя, hp, урон
     # global mns1, mns2
     if message.text == 'Начать игру!':
         # keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -110,16 +130,15 @@ def main(message):
         # keyboard.add(button1, button2, button3)
         bot.send_message(message.chat.id, text='Выберите расу', reply_markup=make_race_menu())
     elif message.text == 'Об игре...':
-        hp = damage = exp = 0
+        hp = damage = exp = balance = 0
         lvl = 1
         bot.send_message(message.chat.id, text='Это лучшая ролевая игра, которую Вы когда-лтбо видели! '
                                                'Надеюсь, она Вам понравится :3')
-
     if message.text == 'Ангел':
         hp += race_db['Ангел']['hp']
         damage += race_db['Ангел']['damage']
         img = open('img/Angel.jpg', 'rb')
-        bot. send_photo(message.chat.id, img)
+        bot.send_photo(message.chat.id, img)
         bot.send_message(message.chat.id,
                          text=f'Вы умопомрачительный ангел!\nВаше здоровье = {hp}, a ваш урон = {damage}.'
                               f'\nВыберите профессию', reply_markup=make_prof_menu())
@@ -169,7 +188,6 @@ def main(message):
         bot.send_message(message.chat.id,
                          text=f'Вы многочегомогущая ведьма!!\nВаше здоровье = {hp}, a ваш урон = {damage}.'
                               f'\nВперед к приключениям', reply_markup=start_quest())
-
     if message.text == 'В путь!':
         event = random.randint(0, 1)
         if event == 0:
@@ -178,12 +196,14 @@ def main(message):
                              text=f'Пока никто не встретился.'
                                   f'\nИдем дальше?', reply_markup=keyboard)
         else:
-            mns0, mns1, mns2 = create_monster(lvl)
+            mns0, mns1, mns2, mns3 = create_monster(lvl)
             keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
             button_1 = types.KeyboardButton('Атаковать')
             button_2 = types.KeyboardButton('Бежать')
             button_3 = types.KeyboardButton('Использовать зелье')
             keyboard.add(button_1, button_2, button_3)
+            img = open(f'img/{mns0}.jpg', 'rb')
+            bot.send_photo(message.chat.id, img)
             bot.send_message(message.chat.id,
                              text=f'А вот и монстр! Его имя {mns0}.\nУ него здоровья {mns1}, '
                                   f'урон {mns2}\nНадеюсь, он Вам понравится', reply_markup=keyboard)
@@ -194,21 +214,32 @@ def main(message):
         button3 = types.KeyboardButton('Урона')
         button4 = types.KeyboardButton('Тумана')
         button5 = types.KeyboardButton('Инфо')
-        keyboard.add(button1, button2, button3, button4, button5)
+        button6 = types.KeyboardButton('Выйти')
+        keyboard.add(button1, button2, button3, button4, button5, button6)
         bot.send_message(message.chat.id, text='Какое зелье вы хотели бы приобрести?\n'
                                                'Зелье Урона - 15 карт\n'
                                                'Зелье Тумана - 13 карт\n'
                                                'Зелье Здоровья - 17 карт\n'
                                                'Зелья Замедления - 5 карт\n'
-                                               'Если не знаете, как они действуют, нажмите "Инфо"', reply_markup=keyboard)
-        if message.text == 'Инфо':
-            pass
-        elif message.text in ['Здоровья', 'Замедления', 'Тумана', 'Урона']:
-            buy(potion=message.text)
+                                               'Если не знаете, как они действуют, нажмите "Инфо"',
+                         reply_markup=keyboard)
+    if message.text == 'Инфо':
+        bot.send_message(message.chat.id, text='Зелье Урона наносит урон монстру равный пятикратному уровню\n'
+                                               'Зелье Тумана позволяет сбежать от монстра со стопроцентоной '
+                                               'вероятностью\n'
+                                               'Зелье Здоровья восстанавливает количество очков жизни, раных '
+                                               'пятикратному уровню\n'
+                                               'Зелье Замедления останавливает одну атаку монстра')
+    elif message.text in ['Здоровья', 'Замедления', 'Тумана', 'Урона']:
+        buy(message, potion=message.text)
+    elif message.text == 'Выйти':
+        bot.send_message(message.chat.id, text=f'Вы вышли из магазина.',
+                         reply_markup=start_quest())
     if message.text == 'Атаковать':
         mns1 -= damage
         if mns1 <= 0:
             exp += 10 * lvl
+            balance += mns3
             if exp >= lvl * 30:
                 lvl += 1
                 hp += 25 * lvl
@@ -217,7 +248,8 @@ def main(message):
                                  text=f'Твой уровень повысился. Теперь у тебя {lvl} уровень\nТвое здоровье: {hp}, '
                                       f'твой урон: {damage}')
             bot.send_message(message.chat.id,
-                             text=f'Враг повержен! За это ты получаешь {10 * lvl} очков опыта, теперь у тебя {exp} очков.\n '
+                             text=f'Враг повержен! За это ты получаешь {10 * lvl} очков опыта и {mns3} карт, теперь у '
+                                  f'тебя {exp} очков и {balance} карт.\n'
                                   f'Идем дальше?', reply_markup=start_quest())
         elif mns1 > 0:
             hp -= mns2 * can
@@ -231,7 +263,8 @@ def main(message):
             if hp <= 0:
                 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
                 bot.send_message(message.chat.id,
-                                 text='Вы были бравым воином, но погибли...\nНапишите "/start", чтобы попробовать заново')
+                                 text='Вы были бравым воином, но погибли...\nНапишите "/start", чтобы попробовать '
+                                      'заново')
                 bot.send_message(message.chat.id,
                                  text='Победа осталась за монстром(', reply_markup=main_menu())
             elif hp > 0:
@@ -254,45 +287,79 @@ def main(message):
             bot.send_message(message.chat.id, text=f'О ужас! Побег не удался и монстр атакаует!')
             if hp <= 0:
                 markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-                bot.send_message(message.chat.id, text='Победа осталась за монстром!', reply_markup=markup)
+                bot.send_message(message.chat.id,
+                                 text='Вы были бравым воином, но погибли...\nНапишите "/start", чтобы попробовать '
+                                      'заново')
+                bot.send_message(message.chat.id,
+                                 text='Победа осталась за монстром(', reply_markup=main_menu())
             elif hp > 0:
                 bot.send_message(message.chat.id, text=f' Теперь у многоуважаемого монстра {mns1} '
-    f'очков здоровья и {mns2} урон, а у Вас {hp} очков здоровья. Что будете делать?', reply_markup=combat())
-    elif message.text == '':
+                                                       f'очков здоровья и {mns2} урон, а у Вас {hp} очков здоровья. '
+                                                       f'Что будете делать?',
+                                 reply_markup=combat())
+    elif message.text == 'Использовать зелье':
+        counthp = potions['Здоровья']
+        countdem = potions['Урона']
+        countslow = potions['Замедления']
+        countfog = potions['Тумана']
+        if counthp + countfog + countdem + countslow == 0:
+            bot.send_message(message.chat.id, text='У вас нет зельев :(',
+                             reply_markup=potionkeyboard())
+        else:
+            keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            button1 = types.KeyboardButton('Здoровья')
+            button2 = types.KeyboardButton('Зaмедления')
+            button3 = types.KeyboardButton('Урoна')
+            button4 = types.KeyboardButton('Тумaна')
+            button5 = types.KeyboardButton('Bыйти')
+            keyboard.add(button1, button2, button3, button4, button5)
+            bot.send_message(message.chat.id, text='Что бы Вы хотели использовать?', reply_markup=keyboard)
+
+    if message.text == 'Здoровья':
+        if potions['Здоровья'] > 0:
+            hp += 5 * lvl
+            potions['Здоровья'] -= 1
+            reply(message)
+        else:
+            bot.send_message(message.chat.id, text='У вас нет зелья Здоровья :(',
+                             reply_markup=potionkeyboard())
+    elif message.text == 'Урoна':
+        if potions['Урона'] > 0:
+            mns1 -= 5 * lvl
+            potions['Урона'] -= 1
+            reply(message)
+        else:
+            bot.send_message(message.chat.id, text='У вас нет зелья Урона :(',
+                             reply_markup=potionkeyboard())
+    elif message.text == 'Тумaна':
+        if potions['Тумана'] > 0:
+            plan = 0
+            potions['Тумана'] -= 1
+            reply(message)
+        else:
+            bot.send_message(message.chat.id, text='У вас нет зелья Тумана :(',
+                             reply_markup=potionkeyboard())
+    elif message.text == 'Зaмедления':
+        if potions['Замедления'] > 0:
+            can = 0
+            potions['Замедления'] -= 1
+            reply(message)
+        else:
+            bot.send_message(message.chat.id, text='У вас нет зелья Замедления :(',
+                             reply_markup=potionkeyboard())
+    elif message.text == 'Bыйти':
         keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        button1 = types.KeyboardButton('Здоровья')
-        button2 = types.KeyboardButton('Замедления')
-        button3 = types.KeyboardButton('Урона')
-        button4 = types.KeyboardButton('Тумана')
-        keyboard.add(button1, button2, button3, button4)
-        bot.send_message(message.chat.id, text='Что бы Вы хотели использовать?', reply_markup=keyboard)
-
-        if message.text == 'Здоровья':
-            if potions['Здоровья'] > 0:
-                hp += 5 * lvl
-                potions['Здоровья'] -= 1
-            else:
-                bot.send_message(message.chat.id, text='У вас нет зелья Здоровья :(')
-        elif message.text == 'Урона':
-            if potions['Урона'] > 0:
-                mns1 -= 5 * lvl
-                potions['Урона'] -= 1
-            else:
-                bot.send_message(message.chat.id, text='У вас нет зелья Урона :(')
-        elif message.text == 'Тумана':
-            if potions['Тумана'] > 0:
-                plan = 0
-                potions['Тумана'] -= 1
-            else:
-                bot.send_message(message.chat.id, text='У вас нет зелья Тумана :(')
-        elif message.text == 'Замедления':
-            if potions['Замедления'] > 0:
-                can = 0
-                potions['Замедления'] -= 1
-            else:
-                bot.send_message(message.chat.id, text='У вас нет зелья Замедления :(')
+        button_1 = types.KeyboardButton('Атаковать')
+        button_2 = types.KeyboardButton('Бежать')
+        button_3 = types.KeyboardButton('Использовать зелье')
+        keyboard.add(button_1, button_2, button_3)
+        bot.send_message(message.chat.id, text='Вы решили не использовать зелья...',
+                         reply_markup=keyboard)
 
 
-monster_name = ['Шоколадный заяц', 'Резиновая уточка-убийца', 'Иван Грозный', 'Дама черви', 'Грабитель']
+monster_name = ['Шоколадный заяц', 'Резиновая уточка - убийца', 'Иван Грозный', 'Дама черви', 'Разбойник',
+                'Гоголь-моголь', 'Мстя', 'Дилер', 'Стоматолог', '10 копеек', 'Пельмешка', 'Опричник',
+                'Каракуля',
+                'Цуцик', 'Боевой стул', 'Сессия']
 
 bot.polling(non_stop=True)
