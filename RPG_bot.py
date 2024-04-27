@@ -7,7 +7,7 @@ bot = telebot.TeleBot(token)
 hp = 0
 damage = 0
 exp = 0
-balance = 0
+balance = 10
 lvl = 1
 potions = {'Здоровья': 0, 'Замедления': 0, 'Тумана': 0, 'Урона': 0}
 potions_price = {'Здоровья': 17, 'Замедления': 5, 'Тумана': 13, 'Урона': 15}
@@ -53,7 +53,8 @@ def make_race_menu():
 
 def main_menu():
     global hp, damage, exp, lvl, balance
-    hp = damage = exp = balance = 0
+    hp = damage = exp = 0
+    balance = 10
     lvl = 1
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     btn1 = types.KeyboardButton('Начать игру')
@@ -197,6 +198,8 @@ def main(message):
                                   f'\nИдем дальше?', reply_markup=keyboard)
         else:
             mns0, mns1, mns2, mns3 = create_monster(lvl)
+            if mns0 not in ['Дилер', 'Дама черви', 'Разбойник', '10 копеек']:
+                mns3 = 0
             keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
             button_1 = types.KeyboardButton('Атаковать')
             button_2 = types.KeyboardButton('Бежать')
